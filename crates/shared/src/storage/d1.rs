@@ -1,4 +1,5 @@
 use crate::{Channel, Error, MonitoringState, Result, TelegramSession};
+use base64::{Engine as _, engine::general_purpose};
 
 /// D1 storage operations
 pub struct D1Storage {
@@ -15,6 +16,9 @@ impl D1Storage {
     pub async fn save_session(&self, user_id: i64, session_data: &[u8]) -> Result<()> {
         let now = chrono::Utc::now().timestamp();
 
+        // Convert binary data to base64 string for D1 storage
+        let session_data_b64 = general_purpose::STANDARD.encode(session_data);
+
         self.db
             .prepare(
                 "INSERT INTO telegram_sessions (user_id, session_data, created_at, updated_at)
@@ -25,7 +29,7 @@ impl D1Storage {
             )
             .bind(&[
                 user_id.into(),
-                session_data.into(),
+                session_data_b64.into(),
                 now.into(),
                 now.into(),
             ])?
