@@ -12,7 +12,7 @@ license = "MIT"
 
 [workspace.dependencies]
 # Cloudflare Workers
-worker = "0.8"
+worker = { version = "0.8", features = ["d1"] }
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
