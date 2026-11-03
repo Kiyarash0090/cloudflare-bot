@@ -1,10 +1,7 @@
 /**
- * Telegram Login Bot
- * Handles Telegram authentication flow using gramjs
+ * Telegram Session Storage Bot
+ * Accepts session strings from users and saves them to D1
  */
-
-import { TelegramClient } from 'telegram';
-import { StringSession } from 'telegram/sessions';
 
 export default {
   async fetch(request, env) {
@@ -15,7 +12,7 @@ export default {
     }
 
     if (url.pathname === '/health' && request.method === 'GET') {
-      return new Response(JSON.stringify({ status: 'ok', service: 'telegram-login-bot' }), {
+      return new Response(JSON.stringify({ status: 'ok', service: 'telegram-session-bot' }), {
         headers: { 'Content-Type': 'application/json' }
       });
     }
@@ -30,16 +27,14 @@ async function handleTelegramWebhook(request, env) {
 
     // Only respond to admin user
     const adminUserId = parseInt(env.ADMIN_USER_ID);
-    const userId = update.message?.from?.id || update.callback_query?.from?.id;
+    const userId = update.message?.from?.id;
 
-    if (userId !== adminUserId) {
+    if (!userId || userId !== adminUserId) {
       return new Response('OK', { status: 200 });
     }
 
     if (update.message) {
       await handleMessage(update.message, env);
-    } else if (update.callback_query) {
-      await handleCallbackQuery(update.callback_query, env);
     }
 
     return new Response('OK', { status: 200 });
@@ -55,20 +50,54 @@ async function handleMessage(message, env) {
   const userId = message.from.id;
 
   // Get current state
-  const stateKey = `login_state:${userId}`;
+  const stateKey = `session_state:${userId}`;
   const state = await env.KV.get(stateKey, 'json');
 
   // Handle commands
   if (text === '/start' || text === '/login') {
-    await sendMessage(env, chatId,
-      '🔐 *ورود به تلگرام*\n\n' +
-      'برای ساختن Session تلگرام، شماره موبایل خود را ارسال کنید.\n\n' +
-      '📱 فرمت: `+989123456789`',
-      { parse_mode: 'Markdown' }
-    );
+    const instructions = `🔐 *ذخیره Session تلگرام*
 
-    // Reset state
-    await env.KV.put(stateKey, JSON.stringify({ step: 'waiting_phone' }), { expirationTtl: 600 });
+برای استفاده از ربات، Session تلگرام خود را ذخیره کنید.
+
+📝 *مراحل:*
+
+1️⃣ Python و telethon را نصب کنید:
+\`\`\`
+pip install telethon
+\`\`\`
+
+2️⃣ کد زیر را در یک فایل Python ذخیره و اجرا کنید:
+
+\`\`\`python
+from telethon.sync import TelegramClient
+from telethon.sessions import StringSession
+
+api_id = 26820590
+api_hash = "76c39222f20cc6138bad5f0ce9760a2c"
+
+with TelegramClient(StringSession(), api_id, api_hash) as client:
+    print("Your Session String:")
+    print(client.session.save())
+\`\`\`
+
+3️⃣ شماره تلفن، کد تایید و در صورت فعال بودن، رمز دو مرحله‌ای را وارد کنید.
+
+4️⃣ Session String چاپ شده را کپی کنید.
+
+5️⃣ Session String را به این ربات ارسال کنید.
+
+⚠️ *توجه:* Session String شما مانند رمز عبور است. آن را با کسی به اشتراک نگذارید.
+
+برای لغو: /cancel`;
+
+    await sendMessage(env, chatId, instructions, { parse_mode: 'Markdown' });
+
+    // Set state to waiting for session
+    await env.KV.put(stateKey, JSON.stringify({
+      step: 'waiting_session',
+      timestamp: Date.now()
+    }), { expirationTtl: 600 });
+
     return;
   }
 
@@ -78,189 +107,61 @@ async function handleMessage(message, env) {
     return;
   }
 
-  if (!state) {
-    await sendMessage(env, chatId, 'لطفاً ابتدا /login را بزنید.');
+  if (text === '/status') {
+    const session = await getSessionFromDatabase(env, userId);
+    if (session) {
+      await sendMessage(env, chatId, '✅ Session شما ذخیره شده است.\n\nبرای ذخیره Session جدید: /login');
+    } else {
+      await sendMessage(env, chatId, '❌ Session ذخیره نشده است.\n\nبرای ذخیره: /login');
+    }
     return;
   }
 
-  // Handle login flow based on state
-  if (state.step === 'waiting_phone') {
-    await handlePhoneNumber(env, chatId, userId, text, state);
-  } else if (state.step === 'waiting_code') {
-    await handleCode(env, chatId, userId, text, state);
-  } else if (state.step === 'waiting_password') {
-    await handlePassword(env, chatId, userId, text, state);
+  // If no state, prompt user to start
+  if (!state) {
+    await sendMessage(env, chatId, 'لطفاً ابتدا /login را بزنید تا راهنمایی دریافت کنید.');
+    return;
+  }
+
+  // Handle session string input
+  if (state.step === 'waiting_session') {
+    await handleSessionString(env, chatId, userId, text);
   }
 }
 
-async function handlePhoneNumber(env, chatId, userId, phone, state) {
-  const stateKey = `login_state:${userId}`;
+async function handleSessionString(env, chatId, userId, sessionString) {
+  const stateKey = `session_state:${userId}`;
 
   try {
-    // Validate phone format
-    if (!phone.startsWith('+')) {
-      await sendMessage(env, chatId, '❌ شماره باید با + شروع شود.\nمثال: +989123456789');
+    // Validate session string format (basic check)
+    if (!sessionString || sessionString.length < 100) {
+      await sendMessage(env, chatId,
+        '❌ Session String نامعتبر است.\n\n' +
+        'لطفاً مطمئن شوید که Session String کامل را ارسال کرده‌اید.\n\n' +
+        'برای دریافت راهنمایی مجدد: /login'
+      );
       return;
     }
 
-    await sendMessage(env, chatId, '⏳ در حال ارسال کد...');
-
-    // Initialize Telegram client
-    const apiId = parseInt(env.TELEGRAM_API_ID);
-    const apiHash = env.TELEGRAM_API_HASH;
-    const client = new TelegramClient(new StringSession(''), apiId, apiHash, {
-      connectionRetries: 5,
-    });
-
-    await client.connect();
-
-    // Send code
-    const result = await client.sendCode({
-      apiId,
-      apiHash,
-    }, phone);
-
-    await client.disconnect();
-
-    // Save state with phone hash
-    await env.KV.put(stateKey, JSON.stringify({
-      step: 'waiting_code',
-      phone,
-      phoneCodeHash: result.phoneCodeHash,
-      timestamp: Date.now()
-    }), { expirationTtl: 600 });
-
-    await sendMessage(env, chatId,
-      '✅ کد تایید ارسال شد!\n\n' +
-      '📲 کد 5 رقمی که از تلگرام دریافت کردید را ارسال کنید.\n\n' +
-      'برای لغو: /cancel'
-    );
-
-  } catch (error) {
-    console.error('Error sending code:', error);
-    await sendMessage(env, chatId, '❌ خطا در ارسال کد. لطفاً دوباره تلاش کنید: /login');
-    await env.KV.delete(stateKey);
-  }
-}
-
-async function handleCode(env, chatId, userId, code, state) {
-  const stateKey = `login_state:${userId}`;
-
-  try {
-    await sendMessage(env, chatId, '⏳ در حال تایید...');
-
-    const apiId = parseInt(env.TELEGRAM_API_ID);
-    const apiHash = env.TELEGRAM_API_HASH;
-    const client = new TelegramClient(new StringSession(''), apiId, apiHash, {
-      connectionRetries: 5,
-    });
-
-    await client.connect();
-
-    // Try to sign in with code
-    try {
-      await client.invoke({
-        _: 'auth.signIn',
-        phoneNumber: state.phone,
-        phoneCodeHash: state.phoneCodeHash,
-        phoneCode: code,
-      });
-
-      // Success! Get session string
-      const sessionString = client.session.save();
-
-      await client.disconnect();
-
-      // Save to database
-      await saveSessionToDatabase(env, userId, sessionString);
-
-      await sendMessage(env, chatId,
-        '✅ *ورود موفقیت‌آمیز!*\n\n' +
-        '🎉 Session تلگرام شما ذخیره شد.\n' +
-        'اکنون می‌توانید از ربات Bale استفاده کنید.',
-        { parse_mode: 'Markdown' }
-      );
-
-      await env.KV.delete(stateKey);
-
-    } catch (error) {
-      // Check if 2FA is required
-      if (error.errorMessage === 'SESSION_PASSWORD_NEEDED') {
-        await client.disconnect();
-
-        await env.KV.put(stateKey, JSON.stringify({
-          ...state,
-          step: 'waiting_password'
-        }), { expirationTtl: 600 });
-
-        await sendMessage(env, chatId,
-          '🔐 *احراز هویت دو مرحله‌ای*\n\n' +
-          'رمز عبور Cloud Password تلگرام خود را وارد کنید.\n\n' +
-          'برای لغو: /cancel',
-          { parse_mode: 'Markdown' }
-        );
-        return;
-      }
-
-      throw error;
-    }
-
-  } catch (error) {
-    console.error('Error verifying code:', error);
-    await sendMessage(env, chatId,
-      '❌ کد اشتباه است یا منقضی شده.\n' +
-      'لطفاً دوباره تلاش کنید: /login'
-    );
-    await env.KV.delete(stateKey);
-  }
-}
-
-async function handlePassword(env, chatId, userId, password, state) {
-  const stateKey = `login_state:${userId}`;
-
-  try {
-    await sendMessage(env, chatId, '⏳ در حال تایید رمز...');
-
-    const apiId = parseInt(env.TELEGRAM_API_ID);
-    const apiHash = env.TELEGRAM_API_HASH;
-    const client = new TelegramClient(new StringSession(''), apiId, apiHash, {
-      connectionRetries: 5,
-    });
-
-    await client.connect();
-
-    // Sign in with password
-    await client.invoke({
-      _: 'auth.checkPassword',
-      password: {
-        _: 'inputCheckPasswordSRP',
-        srpId: state.srpId,
-        A: state.A,
-        M1: password,
-      }
-    });
-
-    // Success! Get session string
-    const sessionString = client.session.save();
-
-    await client.disconnect();
+    await sendMessage(env, chatId, '⏳ در حال ذخیره...');
 
     // Save to database
     await saveSessionToDatabase(env, userId, sessionString);
 
     await sendMessage(env, chatId,
-      '✅ *ورود موفقیت‌آمیز!*\n\n' +
-      '🎉 Session تلگرام شما با رمز دو مرحله‌ای ذخیره شد.\n' +
-      'اکنون می‌توانید از ربات Bale استفاده کنید.',
+      '✅ *Session با موفقیت ذخیره شد!*\n\n' +
+      '🎉 اکنون می‌توانید از ربات Bale برای مانیتورینگ کانال‌های تلگرام استفاده کنید.\n\n' +
+      'برای بررسی وضعیت: /status',
       { parse_mode: 'Markdown' }
     );
 
+    // Clear state
     await env.KV.delete(stateKey);
 
   } catch (error) {
-    console.error('Error verifying password:', error);
+    console.error('Error saving session:', error);
     await sendMessage(env, chatId,
-      '❌ رمز اشتباه است.\n' +
+      '❌ خطا در ذخیره Session.\n\n' +
       'لطفاً دوباره تلاش کنید: /login'
     );
     await env.KV.delete(stateKey);
@@ -285,6 +186,21 @@ async function saveSessionToDatabase(env, userId, sessionString) {
     .run();
 }
 
+async function getSessionFromDatabase(env, userId) {
+  try {
+    const result = await env.DB.prepare(
+      'SELECT session_data FROM telegram_sessions WHERE user_id = ?1'
+    )
+      .bind(userId)
+      .first();
+
+    return result;
+  } catch (error) {
+    console.error('Error getting session:', error);
+    return null;
+  }
+}
+
 async function sendMessage(env, chatId, text, options = {}) {
   const botToken = env.TELEGRAM_BOT_TOKEN;
   const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
@@ -299,17 +215,5 @@ async function sendMessage(env, chatId, text, options = {}) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
-  });
-}
-
-async function handleCallbackQuery(callbackQuery, env) {
-  // Handle button callbacks if needed
-  const chatId = callbackQuery.message.chat.id;
-  const data = callbackQuery.data;
-
-  await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ callback_query_id: callbackQuery.id })
   });
 }
