@@ -1,0 +1,16 @@
+{
+  "name": "session-bot",
+  "version": "1.0.0",
+  "description": "Telegram Session Generator for Cloudflare Workers",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "telegram": "^2.22.2"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}
