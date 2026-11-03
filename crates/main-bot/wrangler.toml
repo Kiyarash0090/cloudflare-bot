@@ -1,0 +1,21 @@
+name = "telegram-bale-bot"
+compatibility_date = "2024-10-01"
+main = "build/worker/shim.mjs"
+workers_dev = true
+
+[build]
+command = "cargo install -q worker-build && worker-build --release"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "telegram_bale_db"
+database_id = "af730fc3-9c08-4f21-b92d-a27f562f40c7"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "715fe8f05a6a4009ac67fcac8554f55b"
+
+[vars]
+ENVIRONMENT = "development"
+LOG_LEVEL = "info"
+ADMIN_USER_ID = "1575910263"

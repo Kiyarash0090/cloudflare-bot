@@ -4,45 +4,22 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:  # برای deploy دستی
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    name: Deploy
+    name: Build and Deploy
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Setup Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          target: wasm32-unknown-unknown
-          override: true
+        uses: dtolnay/rust-toolchain@stable
 
-      - name: Cache cargo registry
-        uses: actions/cache@v3
-        with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Cache cargo index
-        uses: actions/cache@v3
-        with:
-          path: ~/.cargo/git
-          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Cache target directory
-        uses: actions/cache@v3
-        with:
-          path: target
-          key: ${{ runner.os }}-target-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Build
-        run: |
-          cargo build --release --target wasm32-unknown-unknown --workspace
+      - name: Add wasm32 target
+        run: rustup target add wasm32-unknown-unknown
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -53,6 +30,7 @@ jobs:
         run: npm install -g wrangler
 
       - name: Deploy to Cloudflare Workers
+        working-directory: crates/main-bot
         run: wrangler deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
