@@ -26,7 +26,7 @@ pub async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
                 "service": "telegram-bale-bot"
             }))
         })
-        .get("/session", |_, _| session::get_session_ui())
+        .get("/session", |_, _| Ok(session::get_session_ui()))
         .post_async("/session/save", session::save_session)
         .get_async("/session/get", session::get_session)
         .run(req, env)

@@ -24,3 +24,6 @@ console_error_panic_hook = "0.1"
 
 # Time
 chrono.workspace = true
+
+# Encoding
+base64.workspace = true
