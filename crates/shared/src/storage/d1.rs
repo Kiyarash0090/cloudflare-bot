@@ -2,11 +2,11 @@ use crate::{Channel, Error, MonitoringState, Result, TelegramSession};
 
 /// D1 storage operations
 pub struct D1Storage {
-    db: worker::d1::Database,
+    db: worker::d1::D1Database,
 }
 
 impl D1Storage {
-    pub fn new(db: worker::d1::Database) -> Self {
+    pub fn new(db: worker::d1::D1Database) -> Self {
         Self { db }
     }
 
