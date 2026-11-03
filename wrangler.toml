@@ -1,0 +1,49 @@
+name = "telegram-bale-bot"
+main = "crates/main-bot/src/lib.rs"
+compatibility_date = "2024-10-01"
+
+# Workers settings
+workers_dev = true
+
+# D1 Database
+[[d1_databases]]
+binding = "DB"
+database_name = "telegram_bale_db"
+database_id = "af730fc3-9c08-4f21-b92d-a27f562f40c7"
+
+# KV Namespace
+[[kv_namespaces]]
+binding = "KV"
+id = "715fe8f05a6a4009ac67fcac8554f55b"
+
+# Durable Objects
+[[durable_objects.bindings]]
+name = "SESSION_MANAGER"
+class_name = "SessionManager"
+script_name = "session-bot"
+
+[[durable_objects.bindings]]
+name = "TELEGRAM_POLLER"
+class_name = "TelegramPoller"
+script_name = "telegram-poller"
+
+# Migrations
+[[migrations]]
+tag = "v1"
+new_classes = ["SessionManager", "TelegramPoller"]
+
+# Cron Triggers (polling every 1 minute)
+[triggers]
+crons = ["* * * * *"]
+
+# Environment variables (secrets via: wrangler secret put)
+[vars]
+ENVIRONMENT = "development"
+LOG_LEVEL = "info"
+ADMIN_USER_ID = "1575910263"  # Bale admin user ID
+
+# Secrets (set via wrangler secret put <NAME>):
+# - BALE_TOKEN
+# - TELEGRAM_API_ID
+# - TELEGRAM_API_HASH
+# - SESSION_BOT_TOKEN (for Telegram session management bot)
