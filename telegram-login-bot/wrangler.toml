@@ -6,13 +6,13 @@ compatibility_flags = ["nodejs_compat"]
 # D1 Database binding
 [[d1_databases]]
 binding = "DB"
-database_name = "telegram-bale-db"
-database_id = "5c3bd2ac-7d1b-4dd3-bcf7-be150943dffe"
+database_name = "telegram_bale_db"
+database_id = "af730fc3-9c08-4f21-b92d-a27f562f40c7"
 
-# KV namespace binding for session state
+# KV namespace binding
 [[kv_namespaces]]
 binding = "KV"
-id = "dc5771aead9e44f593cf9db0f39fd54e"
+id = "715fe8f05a6a4009ac67fcac8554f55b"
 
 [vars]
 TELEGRAM_BOT_TOKEN = "9297696333:AAFlkRVZOl3Y5JSg18evxnr_jjjYo42B7Uk"
