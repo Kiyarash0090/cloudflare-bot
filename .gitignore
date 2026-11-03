@@ -1,0 +1,65 @@
+# .gitignore برای Telegram-Bale Bot
+
+# Rust
+/target
+**/*.rs.bk
+Cargo.lock
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Wrangler
+.wrangler/
+wrangler.toml.bak
+
+# Node modules (اگر local wrangler نصب کردی)
+node_modules/
+package-lock.json
+yarn.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+wrangler.log
+
+# Session files (حساس!)
+*.session
+session_data/
+
+# Build artifacts
+dist/
+build/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Backup files
+*.bak
+*~
+
+# Python (پروژه قبلی)
+__pycache__/
+*.py[cod]
+*.so
+.Python
+venv/
+ENV/
+
+# Local test files
+test_*
+scratch/
