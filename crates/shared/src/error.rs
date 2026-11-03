@@ -45,6 +45,12 @@ impl From<worker::Error> for Error {
     }
 }
 
+impl From<Error> for worker::Error {
+    fn from(err: Error) -> Self {
+        worker::Error::RustError(err.to_string())
+    }
+}
+
 impl From<serde_json::Error> for Error {
     fn from(err: serde_json::Error) -> Self {
         Error::Serialization(err.to_string())

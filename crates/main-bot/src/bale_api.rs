@@ -200,7 +200,7 @@ impl BaleApi {
         url: &str,
         body: serde_json::Value,
     ) -> Result<T> {
-        let mut headers = Headers::new();
+        let headers = Headers::new();
         headers.set("Content-Type", "application/json")?;
 
         let mut init = RequestInit::new();
@@ -208,7 +208,7 @@ impl BaleApi {
             .with_headers(headers)
             .with_body(Some(body.to_string().into()));
 
-        let mut request = Request::new_with_init(url, &init)?;
+        let request = Request::new_with_init(url, &init)?;
 
         let mut response = Fetch::Request(request).send().await?;
         let json_response: BaleApiResponse<T> = response.json().await?;

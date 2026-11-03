@@ -186,7 +186,7 @@ impl BotHandler {
             return Ok(());
         }
 
-        let username = args[0].trim_start_matches('@');
+        let _username = args[0].trim_start_matches('@');
 
         // For now, we need to get channel by username
         // This is a limitation - we'd need to add a get_channel_by_username method

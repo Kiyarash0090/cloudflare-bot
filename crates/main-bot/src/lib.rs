@@ -16,7 +16,7 @@ pub async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
 
     router
         .get("/", |_, _| Response::ok("Telegram-Bale Bot is running!"))
-        .post_async("/bale/webhook", |mut req, ctx| async move {
+        .post_async("/bale/webhook", |req, ctx| async move {
             handle_webhook(req, ctx).await
         })
         .get("/health", |_, _| {
