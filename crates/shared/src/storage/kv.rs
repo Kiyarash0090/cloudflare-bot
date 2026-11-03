@@ -129,4 +129,21 @@ impl KVStorage {
 
         Ok(())
     }
+
+    // ==================== Helper Methods ====================
+
+    pub async fn get_i64(&self, key: &str) -> Result<Option<i64>> {
+        match self.get(key).await? {
+            Some(val) => {
+                let num = val.parse::<i64>()
+                    .map_err(|_| Error::KVStorage("Failed to parse i64".to_string()))?;
+                Ok(Some(num))
+            }
+            None => Ok(None),
+        }
+    }
+
+    pub async fn set_i64(&self, key: &str, value: i64, ttl_seconds: Option<u64>) -> Result<()> {
+        self.put(key, &value.to_string(), ttl_seconds).await
+    }
 }

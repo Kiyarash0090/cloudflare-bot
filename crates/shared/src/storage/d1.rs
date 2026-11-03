@@ -123,6 +123,10 @@ impl D1Storage {
         Ok(result)
     }
 
+    pub async fn list_channels(&self) -> Result<Vec<Channel>> {
+        self.get_all_channels().await
+    }
+
     pub async fn get_enabled_channels(&self) -> Result<Vec<Channel>> {
         let result = self.db
             .prepare("SELECT * FROM channels WHERE enabled = 1 ORDER BY name")
