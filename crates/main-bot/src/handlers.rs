@@ -144,7 +144,10 @@ impl BotHandler {
         };
 
         // Create channel
-        let mut channel = Channel::new(0, input.identifier.clone());
+        // Note: telegram_id will be fetched from Telegram API in future
+        // For now, use a placeholder that won't conflict with real IDs
+        let temp_id = chrono::Utc::now().timestamp();
+        let mut channel = Channel::new(temp_id, input.identifier.clone());
         channel.username = Some(input.identifier.clone());
         channel.custom_max_size_mb = input.custom_size;
         channel.zip_max_size_mb = input.zip_size;
