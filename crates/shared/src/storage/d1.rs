@@ -1,5 +1,5 @@
 use crate::{Channel, Error, MonitoringState, Result, TelegramSession};
-use worker::D1Database;
+use worker::*;
 
 /// D1 storage operations
 pub struct D1Storage {

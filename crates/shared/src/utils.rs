@@ -1,4 +1,4 @@
-use crate::{Error, Result};
+use crate::Result;
 
 /// Parse Telegram channel identifier
 /// Supports: @username, numeric ID, or https://t.me/username
@@ -18,7 +18,7 @@ pub fn parse_channel_identifier(input: &str) -> Result<String> {
 
 /// Format timestamp to readable string
 pub fn format_timestamp(timestamp: i64) -> String {
-    use chrono::{DateTime, Utc};
+    use chrono::DateTime;
     
     let datetime = DateTime::from_timestamp(timestamp, 0);
     match datetime {
