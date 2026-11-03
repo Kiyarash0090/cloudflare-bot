@@ -20,8 +20,5 @@ thiserror.workspace = true
 # Time
 chrono.workspace = true
 
-# Logging
-log.workspace = true
-
 # Utilities
 base64.workspace = true
