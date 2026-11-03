@@ -34,3 +34,13 @@ jobs:
         run: wrangler deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Install Telegram Login Bot dependencies
+        working-directory: telegram-login-bot
+        run: npm install
+
+      - name: Deploy Telegram Login Bot to Cloudflare Workers
+        working-directory: telegram-login-bot
+        run: wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
