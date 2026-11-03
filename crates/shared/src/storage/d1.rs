@@ -1,5 +1,6 @@
 use crate::{Channel, Error, MonitoringState, Result, TelegramSession};
 use base64::{Engine as _, engine::general_purpose};
+use worker::wasm_bindgen::JsValue;
 
 /// D1 storage operations
 pub struct D1Storage {
@@ -28,10 +29,10 @@ impl D1Storage {
                    updated_at = excluded.updated_at"
             )
             .bind(&[
-                user_id.into(),
+                JsValue::from(user_id as f64),
                 session_data_b64.into(),
-                now.into(),
-                now.into(),
+                JsValue::from(now as f64),
+                JsValue::from(now as f64),
             ])?
             .run()
             .await
@@ -43,7 +44,7 @@ impl D1Storage {
     pub async fn get_session(&self, user_id: i64) -> Result<Option<TelegramSession>> {
         let result = self.db
             .prepare("SELECT id, user_id, session_data, created_at, updated_at FROM telegram_sessions WHERE user_id = ?1")
-            .bind(&[user_id.into()])?
+            .bind(&[JsValue::from(user_id as f64)])?
             .first::<TelegramSession>(None)
             .await
             .map_err(|e| Error::Database(e.to_string()))?;
@@ -54,7 +55,7 @@ impl D1Storage {
     pub async fn delete_session(&self, user_id: i64) -> Result<()> {
         self.db
             .prepare("DELETE FROM telegram_sessions WHERE user_id = ?1")
-            .bind(&[user_id.into()])?
+            .bind(&[JsValue::from(user_id as f64)])?
             .run()
             .await
             .map_err(|e| Error::Database(e.to_string()))?;
@@ -74,15 +75,15 @@ impl D1Storage {
                  RETURNING id"
             )
             .bind(&[
-                channel.telegram_id.into(),
+                JsValue::from(channel.telegram_id as f64),
                 channel.name.clone().into(),
                 channel.username.clone().into(),
                 channel.link.clone().into(),
-                channel.custom_max_size_mb.into(),
-                channel.zip_max_size_mb.into(),
-                (channel.enabled as i64).into(),
-                now.into(),
-                now.into(),
+                JsValue::from(channel.custom_max_size_mb.unwrap_or(0) as f64),
+                JsValue::from(channel.zip_max_size_mb.unwrap_or(0) as f64),
+                JsValue::from((channel.enabled as i64) as f64),
+                JsValue::from(now as f64),
+                JsValue::from(now as f64),
             ])?
             .first::<i64>(Some("id"))
             .await
@@ -95,7 +96,7 @@ impl D1Storage {
     pub async fn remove_channel(&self, telegram_id: i64) -> Result<()> {
         self.db
             .prepare("DELETE FROM channels WHERE telegram_id = ?1")
-            .bind(&[telegram_id.into()])?
+            .bind(&[JsValue::from(telegram_id as f64)])?
             .run()
             .await
             .map_err(|e| Error::Database(e.to_string()))?;
@@ -106,7 +107,7 @@ impl D1Storage {
     pub async fn get_channel(&self, telegram_id: i64) -> Result<Option<Channel>> {
         let result = self.db
             .prepare("SELECT * FROM channels WHERE telegram_id = ?1")
-            .bind(&[telegram_id.into()])?
+            .bind(&[JsValue::from(telegram_id as f64)])?
             .first::<Channel>(None)
             .await
             .map_err(|e| Error::Database(e.to_string()))?;
@@ -161,11 +162,11 @@ impl D1Storage {
                 channel.name.clone().into(),
                 channel.username.clone().into(),
                 channel.link.clone().into(),
-                channel.custom_max_size_mb.into(),
-                channel.zip_max_size_mb.into(),
-                (channel.enabled as i64).into(),
-                now.into(),
-                channel.telegram_id.into(),
+                JsValue::from(channel.custom_max_size_mb.unwrap_or(0) as f64),
+                JsValue::from(channel.zip_max_size_mb.unwrap_or(0) as f64),
+                JsValue::from((channel.enabled as i64) as f64),
+                JsValue::from(now as f64),
+                JsValue::from(channel.telegram_id as f64),
             ])?
             .run()
             .await
@@ -192,7 +193,7 @@ impl D1Storage {
 
         self.db
             .prepare("UPDATE monitoring_state SET is_running = 1, started_at = ?1 WHERE id = 1")
-            .bind(&[now.into()])?
+            .bind(&[JsValue::from(now as f64)])?
             .run()
             .await
             .map_err(|e| Error::Database(e.to_string()))?;
@@ -205,7 +206,7 @@ impl D1Storage {
 
         self.db
             .prepare("UPDATE monitoring_state SET is_running = 0, stopped_at = ?1 WHERE id = 1")
-            .bind(&[now.into()])?
+            .bind(&[JsValue::from(now as f64)])?
             .run()
             .await
             .map_err(|e| Error::Database(e.to_string()))?;
@@ -216,7 +217,7 @@ impl D1Storage {
     pub async fn update_last_update_id(&self, update_id: i64) -> Result<()> {
         self.db
             .prepare("UPDATE monitoring_state SET last_update_id = ?1 WHERE id = 1")
-            .bind(&[update_id.into()])?
+            .bind(&[JsValue::from(update_id as f64)])?
             .run()
             .await
             .map_err(|e| Error::Database(e.to_string()))?;
