@@ -1,5 +1,6 @@
 mod bale_api;
 mod handlers;
+mod session;
 
 use bale_api::BaleApi;
 use handlers::BotHandler;
@@ -25,6 +26,9 @@ pub async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
                 "service": "telegram-bale-bot"
             }))
         })
+        .get("/session", |_, _| session::get_session_ui())
+        .post_async("/session/save", session::save_session)
+        .get_async("/session/get", session::get_session)
         .run(req, env)
         .await
 }

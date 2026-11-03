@@ -1,32 +1,7 @@
-/**
- * Telegram Session Generator Worker
- * This worker provides a UI for storing Telegram session strings
- */
+use worker::*;
 
-export default {
-  async fetch(request, env) {
-    const url = new URL(request.url);
-
-    // Router
-    if (url.pathname === '/' && request.method === 'GET') {
-      return handleUI();
-    }
-
-    if (url.pathname === '/save-session' && request.method === 'POST') {
-      return handleSaveSession(request, env);
-    }
-
-    if (url.pathname === '/get-session' && request.method === 'GET') {
-      return handleGetSession(request, env);
-    }
-
-    return new Response('Not Found', { status: 404 });
-  }
-};
-
-// Serve HTML UI
-function handleUI() {
-  const html = `
+pub fn get_session_ui() -> Response {
+    let html = r#"
 <!DOCTYPE html>
 <html dir="rtl" lang="fa">
 <head>
@@ -163,8 +138,8 @@ function handleUI() {
         <div class="info-box">
             <h3>📝 چگونه Session بسازیم؟</h3>
             <ol>
-                <li>Python و <code>telethon</code> را نصب کنید</li>
-                <li>کد زیر را اجرا کنید:</li>
+                <li>Python و <code>telethon</code> را نصب کنید: <code>pip install telethon</code></li>
+                <li>کد زیر را در یک فایل Python ذخیره و اجرا کنید:</li>
             </ol>
             <pre style="background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 8px; margin: 15px 0; overflow-x: auto; direction: ltr; text-align: left;"><code>from telethon.sync import TelegramClient
 from telethon.sessions import StringSession
@@ -176,7 +151,8 @@ with TelegramClient(StringSession(), api_id, api_hash) as client:
     print("Session String:")
     print(client.session.save())</code></pre>
             <ol start="3">
-                <li>Session String را کپی کرده و در فرم زیر وارد کنید</li>
+                <li>شماره تلفن و کد تایید تلگرام را وارد کنید</li>
+                <li>Session String چاپ شده را کپی کرده و در فرم زیر وارد کنید</li>
             </ol>
         </div>
 
@@ -184,8 +160,8 @@ with TelegramClient(StringSession(), api_id, api_hash) as client:
 
         <form id="sessionForm">
             <div class="form-group">
-                <label for="userId">🆔 شناسه کاربری شما (User ID)</label>
-                <input type="number" id="userId" name="userId" placeholder="مثال: 1575910263" required>
+                <label for="userId">🆔 شناسه کاربری تلگرام شما (User ID)</label>
+                <input type="number" id="userId" name="userId" placeholder="مثال: 5585381768" required>
             </div>
 
             <div class="form-group">
@@ -208,7 +184,7 @@ with TelegramClient(StringSession(), api_id, api_hash) as client:
             const sessionString = document.getElementById('sessionString').value;
 
             try {
-                const response = await fetch('/save-session', {
+                const response = await fetch('/session/save', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -242,86 +218,81 @@ with TelegramClient(StringSession(), api_id, api_hash) as client:
     </script>
 </body>
 </html>
-  `;
+    "#;
 
-  return new Response(html, {
-    headers: { 'Content-Type': 'text/html; charset=utf-8' }
-  });
+    Response::from_html(html).unwrap()
 }
 
-// Save session to D1
-async function handleSaveSession(request, env) {
-  try {
-    const body = await request.json();
-    const { user_id, session_string } = body;
-
-    if (!user_id || !session_string) {
-      return Response.json({ error: 'user_id and session_string are required' }, { status: 400 });
+pub async fn save_session(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    #[derive(serde::Deserialize)]
+    struct SessionRequest {
+        user_id: i64,
+        session_string: String,
     }
 
-    // Convert session string to base64 for storage
-    const sessionData = new TextEncoder().encode(session_string);
-    const base64Session = btoa(String.fromCharCode(...sessionData));
+    let body: SessionRequest = req.json().await?;
 
-    const now = Math.floor(Date.now() / 1000);
+    let db = ctx.env.d1("DB")?;
+    let now = chrono::Utc::now().timestamp();
 
-    // Save to D1
-    await env.DB.prepare(
-      `INSERT INTO telegram_sessions (user_id, session_data, created_at, updated_at)
-       VALUES (?1, ?2, ?3, ?4)
-       ON CONFLICT(user_id) DO UPDATE SET
-         session_data = excluded.session_data,
-         updated_at = excluded.updated_at`
-    )
-      .bind(user_id, base64Session, now, now)
-      .run();
-
-    return Response.json({
-      success: true,
-      message: 'Session saved successfully'
-    });
-
-  } catch (error) {
-    return Response.json({
-      error: error.message
-    }, { status: 500 });
-  }
-}
-
-// Get session from D1
-async function handleGetSession(request, env) {
-  try {
-    const url = new URL(request.url);
-    const userId = url.searchParams.get('user_id');
-
-    if (!userId) {
-      return Response.json({ error: 'user_id parameter is required' }, { status: 400 });
-    }
-
-    const result = await env.DB.prepare(
-      'SELECT session_data FROM telegram_sessions WHERE user_id = ?1'
-    )
-      .bind(parseInt(userId))
-      .first();
-
-    if (!result) {
-      return Response.json({ error: 'Session not found' }, { status: 404 });
-    }
-
-    // Decode base64 session
-    const decoded = atob(result.session_data);
-    const sessionString = new TextDecoder().decode(
-      new Uint8Array([...decoded].map(c => c.charCodeAt(0)))
+    // Convert session string to base64
+    let session_bytes = body.session_string.as_bytes();
+    let session_b64 = base64::Engine::encode(
+        &base64::engine::general_purpose::STANDARD,
+        session_bytes
     );
 
-    return Response.json({
-      user_id: parseInt(userId),
-      session_string: sessionString
-    });
+    db.prepare(
+        "INSERT INTO telegram_sessions (user_id, session_data, created_at, updated_at)
+         VALUES (?1, ?2, ?3, ?4)
+         ON CONFLICT(user_id) DO UPDATE SET
+           session_data = excluded.session_data,
+           updated_at = excluded.updated_at"
+    )
+    .bind(&[
+        body.user_id.into(),
+        session_b64.into(),
+        now.into(),
+        now.into(),
+    ])?
+    .run()
+    .await?;
 
-  } catch (error) {
-    return Response.json({
-      error: error.message
-    }, { status: 500 });
-  }
+    Response::from_json(&serde_json::json!({
+        "success": true,
+        "message": "Session saved successfully"
+    }))
+}
+
+pub async fn get_session(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    let url = req.url()?;
+    let user_id: i64 = url
+        .query_pairs()
+        .find(|(key, _)| key == "user_id")
+        .and_then(|(_, value)| value.parse().ok())
+        .ok_or_else(|| worker::Error::RustError("user_id parameter required".to_string()))?;
+
+    let db = ctx.env.d1("DB")?;
+
+    let result = db
+        .prepare("SELECT session_data FROM telegram_sessions WHERE user_id = ?1")
+        .bind(&[user_id.into()])?
+        .first::<String>(Some("session_data"))
+        .await?
+        .ok_or_else(|| worker::Error::RustError("Session not found".to_string()))?;
+
+    // Decode base64 session
+    let session_bytes = base64::Engine::decode(
+        &base64::engine::general_purpose::STANDARD,
+        result
+    )
+    .map_err(|e| worker::Error::RustError(format!("Base64 decode error: {}", e)))?;
+
+    let session_string = String::from_utf8(session_bytes)
+        .map_err(|e| worker::Error::RustError(format!("UTF-8 decode error: {}", e)))?;
+
+    Response::from_json(&serde_json::json!({
+        "user_id": user_id,
+        "session_string": session_string
+    }))
 }
