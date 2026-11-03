@@ -1,10 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/shared",
-    "crates/session-bot",
     "crates/main-bot",
-    "crates/telegram-poller",
 ]
 
 [workspace.package]
