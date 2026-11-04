@@ -3,9 +3,9 @@ use shared::{Channel, ChannelInput, D1Storage, KVStorage};
 use worker::*;
 
 pub struct BotHandler {
-    api: BaleApi,
-    storage: D1Storage,
-    kv: KVStorage,
+    pub api: BaleApi,
+    pub storage: D1Storage,
+    pub kv: KVStorage,
     admin_user_id: i64,
 }
 
@@ -303,6 +303,52 @@ impl BotHandler {
         );
 
         self.api.send_message(chat_id, &message, None).await?;
+        Ok(())
+    }
+
+    /// Handle private messages from Telegram (for commands like /start, /help, etc.)
+    pub async fn handle_telegram_private_message(&self, message: crate::telegram_webhook::TelegramMessage) -> Result<()> {
+        let user_id = message.chat.id;
+        let chat_id = message.chat.id;
+        let text = match &message.text {
+            Some(t) => t,
+            None => return Ok(()),
+        };
+
+        // Check if user is admin
+        if user_id != self.admin_user_id {
+            self.api
+                .send_message(chat_id, "⛔ شما دسترسی به این ربات را ندارید.", None)
+                .await?;
+            return Ok(());
+        }
+
+        // Parse command
+        let parts: Vec<&str> = text.split_whitespace().collect();
+        if parts.is_empty() {
+            return Ok(());
+        }
+
+        let command = parts[0];
+        let args = &parts[1..];
+
+        // Handle commands
+        match command {
+            "/start" => self.handle_start(chat_id).await?,
+            "/help" => self.handle_help(chat_id).await?,
+            "/add_channel" => self.handle_add_channel(chat_id, args).await?,
+            "/remove_channel" => self.handle_remove_channel(chat_id, args).await?,
+            "/list_channels" => self.handle_list_channels(chat_id).await?,
+            "/start_monitor" => self.handle_start_monitor(chat_id).await?,
+            "/stop_monitor" => self.handle_stop_monitor(chat_id).await?,
+            "/status" => self.handle_status(chat_id).await?,
+            _ => {
+                self.api
+                    .send_message(chat_id, "❓ دستور نامعتبر. از /help استفاده کنید.", None)
+                    .await?;
+            }
+        }
+
         Ok(())
     }
 

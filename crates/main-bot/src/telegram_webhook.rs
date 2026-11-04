@@ -1,4 +1,5 @@
 use crate::bale_api::BaleApi;
+use crate::handlers::BotHandler;
 use shared::{D1Storage, KVStorage};
 use worker::*;
 use serde::{Deserialize, Serialize};
@@ -129,10 +130,30 @@ pub async fn handle_telegram_webhook(mut req: Request, ctx: RouteContext<()>) ->
         }
     };
 
+    // Initialize storage for handlers
+    let storage = D1Storage::new(db);
+    let kv_storage = KVStorage::new(kv);
+
+    // Initialize Bale API for handlers
+    let bale_api = BaleApi::new(bale_token.clone());
+
+    // Get admin user ID from environment
+    let admin_user_id: i64 = ctx.var("ADMIN_USER_ID").map(|v| v.to_string().parse().unwrap_or(0)).unwrap_or(0);
+
+    // Initialize handler for private messages
+    let handler = BotHandler::new(bale_api.clone(), storage, kv_storage, admin_user_id);
+
     // Handle channel_post (messages in channels where bot is admin)
     if let Some(message) = update.channel_post {
-        if let Err(e) = forward_message(message, &bale_api, &storage, &kv_storage).await {
+        if let Err(e) = forward_message(message, &bale_api, &handler.storage, &handler.kv).await {
             console_log!("Error forwarding message: {}", e);
+        }
+    }
+
+    // Handle private messages to the bot
+    if let Some(message) = update.message {
+        if let Err(e) = handler.handle_telegram_private_message(message).await {
+            console_log!("Error handling private message: {}", e);
         }
     }
 
