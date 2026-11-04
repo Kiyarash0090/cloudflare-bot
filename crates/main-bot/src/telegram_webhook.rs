@@ -1,6 +1,6 @@
 use crate::bale_api::BaleApi;
 use crate::handlers::BotHandler;
-use crate::shared::{D1Storage, KVStorage, Channel};
+use shared::{D1Storage, KVStorage, Channel};
 use worker::*;
 use serde::{Deserialize, Serialize};
 
