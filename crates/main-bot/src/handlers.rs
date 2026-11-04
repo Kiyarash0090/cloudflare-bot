@@ -2,8 +2,6 @@ use crate::bale_api::{BaleApi, BaleUpdate};
 use shared::{Channel, ChannelInput, D1Storage, KVStorage};
 use worker::*;
 
-const RATE_LIMIT_SECONDS: i64 = 10;
-
 pub struct BotHandler {
     api: BaleApi,
     storage: D1Storage,
@@ -46,18 +44,6 @@ impl BotHandler {
             return Ok(());
         }
 
-        // Check rate limit
-        if self.check_rate_limit(user_id).await? {
-            self.api
-                .send_message(
-                    chat_id,
-                    &format!("⏳ لطفاً {} ثانیه صبر کنید.", RATE_LIMIT_SECONDS),
-                    None,
-                )
-                .await?;
-            return Ok(());
-        }
-
         // Parse command
         let parts: Vec<&str> = text.split_whitespace().collect();
         if parts.is_empty() {
@@ -83,9 +69,6 @@ impl BotHandler {
                     .await?;
             }
         }
-
-        // Update rate limit
-        self.update_rate_limit(user_id).await?;
 
         Ok(())
     }
@@ -147,7 +130,7 @@ impl BotHandler {
         // Note: telegram_id will be fetched from Telegram API in future
         // For now, use a placeholder that won't conflict with real IDs
         let temp_id = chrono::Utc::now().timestamp();
-        let mut channel = Channel::new(temp_id, input.identifier.clone());
+        let mut channel = Channel::new(temp_id, input.identifier.clone(), chat_id);
         channel.username = Some(input.identifier.clone());
         channel.custom_max_size_mb = input.custom_size;
         channel.zip_max_size_mb = input.zip_size;
@@ -323,23 +306,4 @@ impl BotHandler {
         Ok(())
     }
 
-    async fn check_rate_limit(&self, user_id: i64) -> Result<bool> {
-        let key = format!("ratelimit:{}", user_id);
-        let now = chrono::Utc::now().timestamp();
-
-        if let Some(last_time) = self.kv.get_i64(&key).await? {
-            if now - last_time < RATE_LIMIT_SECONDS {
-                return Ok(true);
-            }
-        }
-
-        Ok(false)
     }
-
-    async fn update_rate_limit(&self, user_id: i64) -> Result<()> {
-        let key = format!("ratelimit:{}", user_id);
-        let now = chrono::Utc::now().timestamp();
-        self.kv.set_i64(&key, now, Some(60)).await?;
-        Ok(())
-    }
-}

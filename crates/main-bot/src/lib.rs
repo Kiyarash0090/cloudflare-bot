@@ -1,6 +1,7 @@
 mod bale_api;
 mod handlers;
 mod session;
+mod telegram_webhook;
 
 use bale_api::BaleApi;
 use handlers::BotHandler;
@@ -19,6 +20,9 @@ pub async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
         .get("/", |_, _| Response::ok("Telegram-Bale Bot is running!"))
         .post_async("/bale/webhook", |req, ctx| async move {
             handle_webhook(req, ctx).await
+        })
+        .post_async("/telegram/webhook", |req, ctx| async move {
+            telegram_webhook::handle_telegram_webhook(req, ctx).await
         })
         .get("/health", |_, _| {
             Response::from_json(&serde_json::json!({

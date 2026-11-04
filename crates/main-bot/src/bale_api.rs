@@ -194,6 +194,149 @@ impl BaleApi {
         user_id == admin_id
     }
 
+    // Send photo by file_id (Telegram file_id compatible)
+    pub async fn send_photo_by_file_id(
+        &self,
+        chat_id: i64,
+        file_id: &str,
+        caption: Option<&str>,
+        parse_mode: Option<&str>,
+    ) -> Result<BaleMessageResponse> {
+        let url = format!("{}/sendPhoto", self.base_url);
+
+        let mut body = json!({
+            "chat_id": chat_id,
+            "photo": file_id,
+        });
+
+        if let Some(cap) = caption {
+            body["caption"] = json!(cap);
+            body["parse_mode"] = json!(parse_mode.unwrap_or("Markdown"));
+        }
+
+        self.make_request(&url, body).await
+    }
+
+    // Send document by file_id
+    pub async fn send_document_by_file_id(
+        &self,
+        chat_id: i64,
+        file_id: &str,
+        file_name: Option<&str>,
+        caption: Option<&str>,
+        parse_mode: Option<&str>,
+    ) -> Result<BaleMessageResponse> {
+        let url = format!("{}/sendDocument", self.base_url);
+
+        let mut body = json!({
+            "chat_id": chat_id,
+            "document": file_id,
+        });
+
+        if let Some(name) = file_name {
+            body["filename"] = json!(name);
+        }
+
+        if let Some(cap) = caption {
+            body["caption"] = json!(cap);
+            body["parse_mode"] = json!(parse_mode.unwrap_or("Markdown"));
+        }
+
+        self.make_request(&url, body).await
+    }
+
+    // Send video by file_id
+    pub async fn send_video_by_file_id(
+        &self,
+        chat_id: i64,
+        file_id: &str,
+        caption: Option<&str>,
+        parse_mode: Option<&str>,
+    ) -> Result<BaleMessageResponse> {
+        let url = format!("{}/sendVideo", self.base_url);
+
+        let mut body = json!({
+            "chat_id": chat_id,
+            "video": file_id,
+        });
+
+        if let Some(cap) = caption {
+            body["caption"] = json!(cap);
+            body["parse_mode"] = json!(parse_mode.unwrap_or("Markdown"));
+        }
+
+        self.make_request(&url, body).await
+    }
+
+    // Send animation by file_id
+    pub async fn send_animation_by_file_id(
+        &self,
+        chat_id: i64,
+        file_id: &str,
+        caption: Option<&str>,
+        parse_mode: Option<&str>,
+    ) -> Result<BaleMessageResponse> {
+        let url = format!("{}/sendAnimation", self.base_url);
+
+        let mut body = json!({
+            "chat_id": chat_id,
+            "animation": file_id,
+        });
+
+        if let Some(cap) = caption {
+            body["caption"] = json!(cap);
+            body["parse_mode"] = json!(parse_mode.unwrap_or("Markdown"));
+        }
+
+        self.make_request(&url, body).await
+    }
+
+    // Send audio by file_id
+    pub async fn send_audio_by_file_id(
+        &self,
+        chat_id: i64,
+        file_id: &str,
+        caption: Option<&str>,
+        parse_mode: Option<&str>,
+    ) -> Result<BaleMessageResponse> {
+        let url = format!("{}/sendAudio", self.base_url);
+
+        let mut body = json!({
+            "chat_id": chat_id,
+            "audio": file_id,
+        });
+
+        if let Some(cap) = caption {
+            body["caption"] = json!(cap);
+            body["parse_mode"] = json!(parse_mode.unwrap_or("Markdown"));
+        }
+
+        self.make_request(&url, body).await
+    }
+
+    // Send voice by file_id
+    pub async fn send_voice_by_file_id(
+        &self,
+        chat_id: i64,
+        file_id: &str,
+        caption: Option<&str>,
+        parse_mode: Option<&str>,
+    ) -> Result<BaleMessageResponse> {
+        let url = format!("{}/sendVoice", self.base_url);
+
+        let mut body = json!({
+            "chat_id": chat_id,
+            "voice": file_id,
+        });
+
+        if let Some(cap) = caption {
+            body["caption"] = json!(cap);
+            body["parse_mode"] = json!(parse_mode.unwrap_or("Markdown"));
+        }
+
+        self.make_request(&url, body).await
+    }
+
     // Generic request maker
     async fn make_request<T: for<'de> Deserialize<'de>>(
         &self,

@@ -20,13 +20,14 @@ pub struct Channel {
     pub link: Option<String>,
     pub custom_max_size_mb: Option<i32>,
     pub zip_max_size_mb: Option<i32>,
+    pub bale_chat_id: i64, // Bale chat ID to forward messages to
     pub enabled: bool,
     pub added_at: i64,
     pub updated_at: i64,
 }
 
 impl Channel {
-    pub fn new(telegram_id: i64, name: String) -> Self {
+    pub fn new(telegram_id: i64, name: String, bale_chat_id: i64) -> Self {
         let now = chrono::Utc::now().timestamp();
         Self {
             id: None,
@@ -36,6 +37,7 @@ impl Channel {
             link: None,
             custom_max_size_mb: None,
             zip_max_size_mb: None,
+            bale_chat_id,
             enabled: true,
             added_at: now,
             updated_at: now,
