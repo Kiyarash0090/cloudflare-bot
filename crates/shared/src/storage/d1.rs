@@ -77,8 +77,8 @@ impl D1Storage {
             .bind(&[
                 JsValue::from(channel.telegram_id as f64),
                 channel.name.clone().into(),
-                channel.username.clone().into(),
-                channel.link.clone().into(),
+                channel.username.clone().unwrap_or_default().into(),
+                channel.link.clone().unwrap_or_default().into(),
                 JsValue::from(channel.custom_max_size_mb.unwrap_or(0) as f64),
                 JsValue::from(channel.zip_max_size_mb.unwrap_or(0) as f64),
                 JsValue::from((channel.enabled as i64) as f64),
@@ -160,8 +160,8 @@ impl D1Storage {
             )
             .bind(&[
                 channel.name.clone().into(),
-                channel.username.clone().into(),
-                channel.link.clone().into(),
+                channel.username.clone().unwrap_or_default().into(),
+                channel.link.clone().unwrap_or_default().into(),
                 JsValue::from(channel.custom_max_size_mb.unwrap_or(0) as f64),
                 JsValue::from(channel.zip_max_size_mb.unwrap_or(0) as f64),
                 JsValue::from((channel.enabled as i64) as f64),
