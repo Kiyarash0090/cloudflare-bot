@@ -1,6 +1,5 @@
 use crate::bale_api::BaleApi;
-use crate::handlers::BotHandler;
-use shared::{D1Storage, KVStorage, Channel};
+use shared::{D1Storage, KVStorage};
 use worker::*;
 use serde::{Deserialize, Serialize};
 
@@ -96,9 +95,9 @@ struct TelegramFile {
     file_path: String,
 }
 
-pub async fn handle_telegram_webhook(req: Request, ctx: RouteContext<()>) -> Result<Response> {
+pub async fn handle_telegram_webhook(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
     // Get environment variables
-    let telegram_token = match ctx.secret("TELEGRAM_BOT_TOKEN") {
+    let _telegram_token = match ctx.secret("TELEGRAM_BOT_TOKEN") {
         Ok(t) => t.to_string(),
         Err(_) => {
             console_log!("TELEGRAM_BOT_TOKEN not configured");
@@ -144,7 +143,7 @@ async fn forward_message(
     message: TelegramMessage,
     bale_api: &BaleApi,
     storage: &D1Storage,
-    kv: &KVStorage,
+    _kv: &KVStorage,
 ) -> Result<()> {
     // Get enabled channels from database
     let channels = storage.get_enabled_channels().await?;
@@ -186,7 +185,7 @@ async fn forward_message(
 
     // Forward caption with media
     if let Some(caption) = &message.caption {
-        let formatted = format!(
+        let _formatted = format!(
             "📢 *{}*\n\n{}",
             channel.name,
             escape_markdown(caption)
@@ -230,7 +229,7 @@ async fn forward_message(
     Ok(())
 }
 
-fn check_file_size(message: &TelegramMessage, limit_mb: i32) -> Option<i64> {
+fn check_file_size(message: &TelegramMessage, _limit_mb: i32) -> Option<i64> {
     let mut max_size = 0i64;
 
     if let Some(photos) = &message.photo {
